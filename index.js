@@ -43,10 +43,13 @@ app.get("/cum", async (req, res) => {
     const result = await collection.findOneAndUpdate(
       { _id: key },
       { $inc: { count: 1 } },
-      { upsert: true, returnDocument: "after" }
+      {
+        upsert: true,
+        returnDocument: "after"
+      }
     );
 
-    const count = result?.value?.count ?? 1;
+    const count = result?.value?.count || 1;
     const plural = count === 1 ? "vez" : "veces";
 
     res.send(
