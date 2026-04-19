@@ -46,7 +46,7 @@ app.get("/cum", async (req, res) => {
       { upsert: true, returnDocument: "after" }
     );
 
-    const count = result.value.count;
+    const count = result?.value?.count ?? 1;
     const plural = count === 1 ? "vez" : "veces";
 
     res.send(
