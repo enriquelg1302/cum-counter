@@ -1,70 +1,35 @@
 const express = require("express");
+const { MongoClient } = require("mongodb");
+
 const app = express();
 
 // ================= CONFIG =================
-const GITHUB_TOKEN = "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";
-const REPO = "enriquelg1302/cum-counter";
-const FILE_PATH = "data.json";
+const URI = "mongodb+srv://admin:<admin>@cluster0.ervvyrs.mongodb.net/?appName=Cluster0"; // 🔴 reemplaza esto
+const DB_NAME = "twitchbot";
+const COLLECTION = "counters";
 
-// ================= GITHUB GET =================
-async function getData() {
-  const res = await fetch(
-    `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
-    {
-      headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
-        "User-Agent": "node.js"
-      }
-    }
-  );
+let db;
 
-  const data = await res.json();
-
-  // Si el archivo no existe aún
-  if (!data.content) {
-    return { json: {}, sha: data.sha };
-  }
-
-  const content = Buffer.from(data.content, "base64").toString("utf8");
-
-  let json;
+// ================= CONEXIÓN =================
+async function connectDB() {
   try {
-    json = JSON.parse(content || "{}");
-  } catch (e) {
-    json = {};
+    const client = new MongoClient(URI);
+    await client.connect();
+    db = client.db(DB_NAME);
+    console.log("✅ MongoDB conectado correctamente");
+  } catch (err) {
+    console.error("❌ Error conectando MongoDB:", err);
   }
-
-  return {
-    json,
-    sha: data.sha
-  };
 }
 
-// ================= GITHUB SAVE =================
-async function saveData(json, sha) {
-  await fetch(
-    `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
-    {
-      method: "PUT",
-      headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
-        "User-Agent": "node.js",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message: "update counter",
-        content: Buffer.from(JSON.stringify(json, null, 2)).toString("base64"),
-        sha
-      })
-    }
-  );
-}
+connectDB();
 
-// ================= ROUTE =================
+// ================= ROUTE PRINCIPAL =================
 app.get("/cum", async (req, res) => {
   let u1 = (req.query.u1 || "").trim().toLowerCase();
   let u2 = (req.query.u2 || "").trim().toLowerCase();
 
+  // Validación
   if (!u1 || !u2) {
     return res.send("Debes especificar dos usuarios");
   }
@@ -72,13 +37,16 @@ app.get("/cum", async (req, res) => {
   const key = `${u1}->${u2}`;
 
   try {
-    const { json, sha } = await getData();
+    const collection = db.collection(COLLECTION);
 
-    json[key] = (json[key] || 0) + 1;
+    // 🔥 INCREMENTO ATÓMICO (clave del sistema)
+    const result = await collection.findOneAndUpdate(
+      { _id: key },
+      { $inc: { count: 1 } },
+      { upsert: true, returnDocument: "after" }
+    );
 
-    await saveData(json, sha);
-
-    const count = json[key];
+    const count = result.value.count;
     const plural = count === 1 ? "vez" : "veces";
 
     res.send(
@@ -86,13 +54,14 @@ app.get("/cum", async (req, res) => {
     );
 
   } catch (err) {
-    console.error("ERROR:", err);
+    console.error("❌ Error en /cum:", err);
     res.send("Error al procesar el contador");
   }
 });
 
 // ================= SERVER =================
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-  console.log("API running on port " + PORT);
+  console.log(`🚀 API corriendo en puerto ${PORT}`);
 });
