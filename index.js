@@ -1,11 +1,12 @@
 const express = require("express");
-const fetch = require("node-fetch");
-
 const app = express();
 
+// ===== CONFIG =====
 const GITHUB_TOKEN = "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";
 const REPO = "enriquelg1302/cum-counter";
 const FILE_PATH = "data.json";
+
+// ===== FUNCIONES GITHUB =====
 
 async function getData() {
   const res = await fetch(
@@ -19,8 +20,13 @@ async function getData() {
   );
 
   const data = await res.json();
-  const content = Buffer.from(data.content, "base64").toString();
-  return { data: JSON.parse(content), sha: data.sha };
+
+  const content = Buffer.from(data.content, "base64").toString("utf8");
+
+  return {
+    json: JSON.parse(content),
+    sha: data.sha
+  };
 }
 
 async function saveData(json, sha) {
@@ -42,24 +48,40 @@ async function saveData(json, sha) {
   );
 }
 
+// ===== ROUTE =====
+
 app.get("/cum", async (req, res) => {
   let u1 = (req.query.u1 || "").trim().toLowerCase();
   let u2 = (req.query.u2 || "").trim().toLowerCase();
 
-  if (!u1 || !u2) return res.send("1");
+  if (!u1 || !u2) {
+    return res.send("Debes especificar dos usuarios");
+  }
 
   const key = `${u1}->${u2}`;
 
-  const { data, sha } = await getData();
+  try {
+    const { json, sha } = await getData();
 
-  data[key] = (data[key] || 0) + 1;
+    json[key] = (json[key] || 0) + 1;
 
-  await saveData(data, sha);
+    await saveData(json, sha);
 
-  const count = data[key];
-  const plural = count === 1 ? "vez" : "veces";
+    const count = json[key];
+    const plural = count === 1 ? "vez" : "veces";
 
-  res.send(`${u1} se ha venido en ${u2} ${count} ${plural} 💦, que riko 7u7`);
+    res.send(
+      `${u1} se ha venido en ${u2} ${count} ${plural} 💦, que riko 7u7`
+    );
+  } catch (err) {
+    console.log(err);
+    res.send("Error al procesar el contador");
+  }
 });
 
-app.listen(3000);
+// ===== SERVER =====
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("API running on port " + PORT);
+});
