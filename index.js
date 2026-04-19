@@ -1,13 +1,12 @@
 const express = require("express");
 const app = express();
 
-// ===== CONFIG =====
+// ================= CONFIG =================
 const GITHUB_TOKEN = "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";
 const REPO = "enriquelg1302/cum-counter";
 const FILE_PATH = "data.json";
 
-// ===== FUNCIONES GITHUB =====
-
+// ================= GITHUB GET =================
 async function getData() {
   const res = await fetch(
     `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
@@ -21,14 +20,27 @@ async function getData() {
 
   const data = await res.json();
 
+  // Si el archivo no existe aún
+  if (!data.content) {
+    return { json: {}, sha: data.sha };
+  }
+
   const content = Buffer.from(data.content, "base64").toString("utf8");
 
+  let json;
+  try {
+    json = JSON.parse(content || "{}");
+  } catch (e) {
+    json = {};
+  }
+
   return {
-    json: JSON.parse(content),
+    json,
     sha: data.sha
   };
 }
 
+// ================= GITHUB SAVE =================
 async function saveData(json, sha) {
   await fetch(
     `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
@@ -48,8 +60,7 @@ async function saveData(json, sha) {
   );
 }
 
-// ===== ROUTE =====
-
+// ================= ROUTE =================
 app.get("/cum", async (req, res) => {
   let u1 = (req.query.u1 || "").trim().toLowerCase();
   let u2 = (req.query.u2 || "").trim().toLowerCase();
@@ -73,14 +84,14 @@ app.get("/cum", async (req, res) => {
     res.send(
       `${u1} se ha venido en ${u2} ${count} ${plural} 💦, que riko 7u7`
     );
+
   } catch (err) {
-    console.log(err);
+    console.error("ERROR:", err);
     res.send("Error al procesar el contador");
   }
 });
 
-// ===== SERVER =====
-
+// ================= SERVER =================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("API running on port " + PORT);
