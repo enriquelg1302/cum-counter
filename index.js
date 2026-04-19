@@ -1,7 +1,23 @@
 const express = require("express");
-const app = express();
+const fs = require("fs");
 
-const counters = {};
+const app = express();
+const FILE = "data.json";
+
+// Cargar datos si existen
+let counters = {};
+
+if (fs.existsSync(FILE)) {
+  try {
+    counters = JSON.parse(fs.readFileSync(FILE, "utf8"));
+  } catch (e) {
+    counters = {};
+  }
+}
+
+function saveData() {
+  fs.writeFileSync(FILE, JSON.stringify(counters, null, 2));
+}
 
 app.get("/cum", (req, res) => {
   let u1 = (req.query.u1 || "").trim().toLowerCase();
@@ -12,6 +28,8 @@ app.get("/cum", (req, res) => {
   const key = `${u1}->${u2}`;
 
   counters[key] = (counters[key] || 0) + 1;
+
+  saveData();
 
   res.send(String(counters[key]));
 });
