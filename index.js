@@ -4,7 +4,7 @@ const { MongoClient } = require("mongodb");
 const app = express();
 
 // ================= CONFIG =================
-const URI = "mongodb+srv://admin:<admin>@cluster0.ervvyrs.mongodb.net/?appName=Cluster0"; // 🔴 reemplaza esto
+const URI = "mongodb+srv://admin:admin@cluster0.ervvyrs.mongodb.net/?appName=Cluster0"; // 🔴 reemplaza esto
 const DB_NAME = "twitchbot";
 const COLLECTION = "counters";
 
